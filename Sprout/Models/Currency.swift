@@ -17,6 +17,7 @@ enum Currency: String, CaseIterable, Identifiable, Codable {
 
     func format(_ amount: Double) -> String {
         let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US")
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2

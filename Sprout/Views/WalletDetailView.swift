@@ -25,7 +25,7 @@ struct WalletDetailView: View {
                     }
 
                     VStack(spacing: 8) {
-                        ForEach(store.categories) { category in
+                        ForEach(store.categories.filter { $0.kind == .expense }) { category in
                             categoryRow(category, wallet: wallet)
                         }
                     }
