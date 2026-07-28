@@ -1,28 +1,36 @@
 import SwiftUI
 import Combine
 
-/// Central in-memory store for Sprout. Owns all data and the derived values
-/// each screen reads (month totals, per-wallet spend, category breakdowns).
-/// Seeded with sample data so the UI has something to show on first launch.
+/// Central store for Sprout. Owns all data and the derived values each
+/// screen reads (month totals, per-wallet spend, category breakdowns).
+/// Starts empty on first launch and persists every change to a local JSON
+/// file (see `Persistence`), so data survives relaunches and rebuilds.
 final class AppStore: ObservableObject {
-    @Published var wallets: [Wallet]
-    @Published var categories: [Category]
-    @Published var transactions: [Transaction]
-    @Published var goals: [Goal]
-    @Published var budgets: [Budget]
+    @Published var wallets: [Wallet] { didSet { persist() } }
+    @Published var categories: [Category] { didSet { persist() } }
+    @Published var transactions: [Transaction] { didSet { persist() } }
+    @Published var goals: [Goal] { didSet { persist() } }
+    @Published var budgets: [Budget] { didSet { persist() } }
     @Published var selectedMonth: Date
     @Published var budgetPeriodFilter: BudgetPeriod = .monthly
 
     private let calendar: Calendar = .current
 
     init() {
-        let seed = AppStore.seedData()
-        wallets = seed.wallets
-        categories = seed.categories
-        transactions = seed.transactions
-        goals = seed.goals
-        budgets = seed.budgets
+        let snapshot = Persistence.load() ?? AppSnapshot()
+        wallets = snapshot.wallets
+        categories = snapshot.categories
+        transactions = snapshot.transactions
+        goals = snapshot.goals
+        budgets = snapshot.budgets
         selectedMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+    }
+
+    private func persist() {
+        Persistence.save(AppSnapshot(
+            wallets: wallets, categories: categories, transactions: transactions,
+            goals: goals, budgets: budgets
+        ))
     }
 
     // MARK: - Month navigation
