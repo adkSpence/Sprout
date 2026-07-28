@@ -161,4 +161,17 @@ final class AppStore: ObservableObject {
     func budgets(for period: BudgetPeriod) -> [Budget] {
         budgets.filter { $0.period == period }
     }
+
+    // MARK: - Backup restore
+
+    /// Replaces all data with a previously exported snapshot (see
+    /// `BackupManager`). Each assignment re-triggers `persist()` via
+    /// `didSet`, so the local store stays in sync too.
+    func restore(from snapshot: AppSnapshot) {
+        wallets = snapshot.wallets
+        categories = snapshot.categories
+        transactions = snapshot.transactions
+        goals = snapshot.goals
+        budgets = snapshot.budgets
+    }
 }

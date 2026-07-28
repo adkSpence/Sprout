@@ -15,7 +15,9 @@ struct AppSnapshot: Codable {
 }
 
 enum Persistence {
-    private static var fileURL: URL {
+    /// Exposed so `BackupManager` can copy the same bytes out to a
+    /// user-chosen backup folder without duplicating the encode logic.
+    static var fileURL: URL {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Sprout", isDirectory: true)
         if !FileManager.default.fileExists(atPath: dir.path) {
