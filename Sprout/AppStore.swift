@@ -149,6 +149,32 @@ final class AppStore: ObservableObject {
         guard let idx = categories.firstIndex(where: { $0.id == categoryID }) else { return }
         categories[idx].subcategories.append(sub)
     }
+
+    func updateCategory(_ category: Category) {
+        guard let idx = categories.firstIndex(where: { $0.id == category.id }) else { return }
+        categories[idx] = category
+    }
+
+    /// Deletes the category and scrubs it out of any budget that referenced
+    /// it. Transactions keep their (now-dangling) categoryID and fall back to
+    /// showing "Uncategorized" rather than being deleted along with it.
+    func deleteCategory(_ id: UUID) {
+        categories.removeAll { $0.id == id }
+        for i in budgets.indices {
+            budgets[i].categoryIDs.removeAll { $0 == id }
+        }
+    }
+
+    func updateSubcategory(_ sub: Subcategory, in categoryID: UUID) {
+        guard let idx = categories.firstIndex(where: { $0.id == categoryID }),
+              let subIdx = categories[idx].subcategories.firstIndex(where: { $0.id == sub.id }) else { return }
+        categories[idx].subcategories[subIdx] = sub
+    }
+
+    func deleteSubcategory(_ subID: UUID, from categoryID: UUID) {
+        guard let idx = categories.firstIndex(where: { $0.id == categoryID }) else { return }
+        categories[idx].subcategories.removeAll { $0.id == subID }
+    }
     func addTransaction(_ tx: Transaction) {
         transactions.append(tx)
         guard let idx = wallets.firstIndex(where: { $0.id == tx.walletID }) else { return }

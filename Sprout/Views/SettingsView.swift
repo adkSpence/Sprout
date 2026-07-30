@@ -14,6 +14,26 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: SproutSpacing.s4) {
                 Text("Settings").font(.sproutHeading(26))
 
+                NavigationLink {
+                    CategoriesManagerView()
+                } label: {
+                    SproutCard {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Categories").font(.sproutHeading(17)).foregroundStyle(Color.sproutText)
+                                Text("\(store.categories.count) \(store.categories.count == 1 ? "category" : "categories") — rename, re-icon, or delete")
+                                    .font(.sproutBody(12))
+                                    .foregroundStyle(Color.sproutNeutral700)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sproutNeutral600)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
                 SproutCard {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Backup").font(.sproutHeading(17))

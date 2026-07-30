@@ -15,6 +15,8 @@ struct SproutTextField: View {
                 .foregroundStyle(Color.sproutText.opacity(0.7))
             TextField(placeholder, text: $text)
                 .keyboardType(keyboardType)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.words)
                 .font(.sproutBody(14))
                 .padding(.horizontal, 14)
                 .frame(height: 36)
