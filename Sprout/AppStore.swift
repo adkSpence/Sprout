@@ -59,12 +59,15 @@ final class AppStore: ObservableObject {
 
     // MARK: - Totals
 
-    /// Wallet balances grouped by currency, primary (most common) first.
+    /// Wallet balances grouped by currency, the currency actually holding the
+    /// most money first (falling back to wallet count to break ties between
+    /// two currencies with equal — including zero — balances).
     var totalsByCurrency: [(currency: Currency, total: Double)] {
         let grouped = Dictionary(grouping: wallets, by: \.currency)
         let sums = grouped.map { (currency: $0.key, total: $0.value.reduce(0) { $0 + $1.balance }) }
         return sums.sorted { lhs, rhs in
-            (grouped[lhs.currency]?.count ?? 0) > (grouped[rhs.currency]?.count ?? 0)
+            if abs(lhs.total) != abs(rhs.total) { return abs(lhs.total) > abs(rhs.total) }
+            return (grouped[lhs.currency]?.count ?? 0) > (grouped[rhs.currency]?.count ?? 0)
         }
     }
 
