@@ -14,6 +14,11 @@ struct AddTransactionSheet: View {
     @State private var subcategoryID: UUID?
     @State private var date = Date()
     @State private var note = ""
+    @State private var showAddCategory = false
+
+    private var canSave: Bool {
+        walletID != nil && categoryID != nil && (Double(amountText) ?? 0) > 0
+    }
 
     private var kindCategories: [Category] {
         store.categories.filter { $0.kind == kind }
@@ -45,12 +50,20 @@ struct AddTransactionSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Category").font(.sproutBody(12)).foregroundStyle(Color.sproutText.opacity(0.7))
+                if kindCategories.isEmpty {
+                    Text("No \(kind == .expense ? "expense" : "income") categories yet.")
+                        .font(.sproutBody(12))
+                        .foregroundStyle(Color.sproutNeutral600)
+                }
                 FlowChips {
                     ForEach(kindCategories) { c in
                         SproutChoiceChip(label: c.name, icon: c.icon, selected: categoryID == c.id) {
                             categoryID = c.id
                             subcategoryID = nil
                         }
+                    }
+                    SproutChoiceChip(label: "New category", icon: "plus", selected: false) {
+                        showAddCategory = true
                     }
                 }
                 if let sub = selectedCategory, !sub.subcategories.isEmpty {
@@ -78,6 +91,14 @@ struct AddTransactionSheet: View {
                     kind: kind, amount: amount, date: date, note: note
                 ))
                 dismiss()
+            }
+            .disabled(!canSave)
+            .opacity(canSave ? 1 : 0.45)
+        }
+        .sheet(isPresented: $showAddCategory) {
+            AddCategorySheet(presetKind: kind) { newCategory in
+                categoryID = newCategory.id
+                subcategoryID = nil
             }
         }
         .onAppear {

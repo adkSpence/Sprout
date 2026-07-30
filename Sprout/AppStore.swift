@@ -59,12 +59,15 @@ final class AppStore: ObservableObject {
 
     // MARK: - Totals
 
-    /// Wallet balances grouped by currency, primary (most common) first.
+    /// Wallet balances grouped by currency, the currency actually holding the
+    /// most money first (falling back to wallet count to break ties between
+    /// two currencies with equal — including zero — balances).
     var totalsByCurrency: [(currency: Currency, total: Double)] {
         let grouped = Dictionary(grouping: wallets, by: \.currency)
         let sums = grouped.map { (currency: $0.key, total: $0.value.reduce(0) { $0 + $1.balance }) }
         return sums.sorted { lhs, rhs in
-            (grouped[lhs.currency]?.count ?? 0) > (grouped[rhs.currency]?.count ?? 0)
+            if abs(lhs.total) != abs(rhs.total) { return abs(lhs.total) > abs(rhs.total) }
+            return (grouped[lhs.currency]?.count ?? 0) > (grouped[rhs.currency]?.count ?? 0)
         }
     }
 
@@ -145,6 +148,32 @@ final class AppStore: ObservableObject {
     func addSubcategory(_ sub: Subcategory, to categoryID: UUID) {
         guard let idx = categories.firstIndex(where: { $0.id == categoryID }) else { return }
         categories[idx].subcategories.append(sub)
+    }
+
+    func updateCategory(_ category: Category) {
+        guard let idx = categories.firstIndex(where: { $0.id == category.id }) else { return }
+        categories[idx] = category
+    }
+
+    /// Deletes the category and scrubs it out of any budget that referenced
+    /// it. Transactions keep their (now-dangling) categoryID and fall back to
+    /// showing "Uncategorized" rather than being deleted along with it.
+    func deleteCategory(_ id: UUID) {
+        categories.removeAll { $0.id == id }
+        for i in budgets.indices {
+            budgets[i].categoryIDs.removeAll { $0 == id }
+        }
+    }
+
+    func updateSubcategory(_ sub: Subcategory, in categoryID: UUID) {
+        guard let idx = categories.firstIndex(where: { $0.id == categoryID }),
+              let subIdx = categories[idx].subcategories.firstIndex(where: { $0.id == sub.id }) else { return }
+        categories[idx].subcategories[subIdx] = sub
+    }
+
+    func deleteSubcategory(_ subID: UUID, from categoryID: UUID) {
+        guard let idx = categories.firstIndex(where: { $0.id == categoryID }) else { return }
+        categories[idx].subcategories.removeAll { $0.id == subID }
     }
     func addTransaction(_ tx: Transaction) {
         transactions.append(tx)

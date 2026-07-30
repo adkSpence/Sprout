@@ -1,24 +1,23 @@
 import SwiftUI
 
-struct AddCategorySheet: View {
+struct EditCategorySheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
 
-    /// Called with the newly created category instead of a plain dismiss —
-    /// lets a caller (e.g. the transaction sheet) auto-select it.
-    var onSave: ((Category) -> Void)? = nil
-
-    @State private var name = ""
+    let category: Category
+    @State private var name: String
     @State private var kind: CategoryKind
-    @State private var icon = IconPalette.choices[0]
+    @State private var icon: String
 
-    init(presetKind: CategoryKind = .expense, onSave: ((Category) -> Void)? = nil) {
-        self.onSave = onSave
-        _kind = State(initialValue: presetKind)
+    init(category: Category) {
+        self.category = category
+        _name = State(initialValue: category.name)
+        _kind = State(initialValue: category.kind)
+        _icon = State(initialValue: category.icon)
     }
 
     var body: some View {
-        ModalSheet(title: "Add category") {
+        ModalSheet(title: "Edit category") {
             SproutTextField(label: "Name", text: $name, placeholder: "e.g. Pets")
 
             VStack(alignment: .leading, spacing: 6) {
@@ -34,10 +33,12 @@ struct AddCategorySheet: View {
                 IconPickerGrid(selection: $icon)
             }
 
-            SproutButton(title: "Save category") {
-                let category = Category(name: name.isEmpty ? "New category" : name, icon: icon, kind: kind)
-                store.addCategory(category)
-                onSave?(category)
+            SproutButton(title: "Save changes") {
+                var updated = category
+                updated.name = name.isEmpty ? category.name : name
+                updated.kind = kind
+                updated.icon = icon
+                store.updateCategory(updated)
                 dismiss()
             }
         }
@@ -45,5 +46,6 @@ struct AddCategorySheet: View {
 }
 
 #Preview {
-    AddCategorySheet().environmentObject(AppStore())
+    EditCategorySheet(category: Category(name: "Groceries", icon: "cart"))
+        .environmentObject(AppStore())
 }
