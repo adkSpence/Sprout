@@ -4,6 +4,9 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showAddWallet = false
     @State private var showAddTransaction = false
+    @State private var editWalletTarget: Wallet?
+    @State private var deleteWalletTarget: Wallet?
+    @State private var walletsRowWidth: CGFloat = 360
 
     var body: some View {
         ScrollView {
@@ -25,6 +28,18 @@ struct HomeView: View {
         .background(Color.sproutBg)
         .sheet(isPresented: $showAddWallet) { AddWalletSheet() }
         .sheet(isPresented: $showAddTransaction) { AddTransactionSheet() }
+        .sheet(item: $editWalletTarget) { wallet in EditWalletSheet(wallet: wallet) }
+        .alert("Delete this wallet?", isPresented: Binding(
+            get: { deleteWalletTarget != nil },
+            set: { if !$0 { deleteWalletTarget = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let target = deleteWalletTarget { store.deleteWallet(target.id) }
+            }
+        } message: {
+            Text("This also deletes every transaction recorded against \"\(deleteWalletTarget?.name ?? "")\". This can't be undone.")
+        }
     }
 
     private var monthSelector: some View {
@@ -82,32 +97,36 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Wallets").font(.sproutHeading(17))
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
                     ForEach(store.wallets) { wallet in
                         NavigationLink {
                             WalletDetailView(walletID: wallet.id)
                         } label: {
-                            walletCard(wallet)
+                            WalletCard(wallet: wallet, centerX: walletsRowWidth / 2, coordinateSpace: "walletScroll")
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button { editWalletTarget = wallet } label: {
+                                Label("Edit wallet", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) { deleteWalletTarget = wallet } label: {
+                                Label("Delete wallet", systemImage: "trash")
+                            }
+                        }
                     }
                     addWalletCard
                 }
+                .padding(.vertical, 10)
             }
+            .coordinateSpace(name: "walletScroll")
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { walletsRowWidth = geo.size.width }
+                        .onChange(of: geo.size.width) { _, newValue in walletsRowWidth = newValue }
+                }
+            )
         }
-    }
-
-    private func walletCard(_ wallet: Wallet) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SproutIconChip(systemImage: wallet.type.icon, size: 34, iconSize: 17)
-            Text(wallet.name).font(.sproutBody(13, weight: .semibold)).foregroundStyle(Color.sproutText)
-            Text(wallet.balanceLabel).font(.sproutHeading(16)).foregroundStyle(Color.sproutText)
-            SproutTag(text: wallet.type.rawValue, style: .neutral)
-        }
-        .padding(14)
-        .frame(width: 148, alignment: .leading)
-        .background(Color.sproutSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var addWalletCard: some View {
@@ -119,9 +138,9 @@ struct HomeView: View {
                 Text("Add wallet").font(.sproutBody(12))
             }
             .foregroundStyle(Color.sproutNeutral700)
-            .frame(width: 148, height: 138)
+            .frame(width: 154, height: 174)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
                     .foregroundStyle(Color.sproutNeutral500)
             )

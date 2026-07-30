@@ -11,6 +11,12 @@ struct SproutApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // Sprout is a single fixed warm-light theme (cream/terracotta),
+                // not designed with a dark variant. Without this, unstyled
+                // Text defaults to the system's automatic label color, which
+                // turns white in system Dark Mode and lands unreadable on our
+                // explicitly-light backgrounds.
+                .preferredColorScheme(.light)
         }
     }
 }

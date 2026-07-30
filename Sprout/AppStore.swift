@@ -144,6 +144,20 @@ final class AppStore: ObservableObject {
     // MARK: - Mutations
 
     func addWallet(_ wallet: Wallet) { wallets.append(wallet) }
+
+    func updateWallet(_ wallet: Wallet) {
+        guard let idx = wallets.firstIndex(where: { $0.id == wallet.id }) else { return }
+        wallets[idx] = wallet
+    }
+
+    /// Deletes the wallet along with every transaction against it — unlike a
+    /// category, a transaction can't meaningfully dangle without the wallet
+    /// whose balance it affected.
+    func deleteWallet(_ id: UUID) {
+        wallets.removeAll { $0.id == id }
+        transactions.removeAll { $0.walletID == id }
+    }
+
     func addCategory(_ category: Category) { categories.append(category) }
     func addSubcategory(_ sub: Subcategory, to categoryID: UUID) {
         guard let idx = categories.firstIndex(where: { $0.id == categoryID }) else { return }
@@ -175,17 +189,51 @@ final class AppStore: ObservableObject {
         guard let idx = categories.firstIndex(where: { $0.id == categoryID }) else { return }
         categories[idx].subcategories.removeAll { $0.id == subID }
     }
+    private func applyBalanceEffect(_ tx: Transaction, sign: Double) {
+        guard let idx = wallets.firstIndex(where: { $0.id == tx.walletID }) else { return }
+        let delta = tx.kind == .income ? tx.amount : -tx.amount
+        wallets[idx].balance += sign * delta
+    }
+
     func addTransaction(_ tx: Transaction) {
         transactions.append(tx)
-        guard let idx = wallets.firstIndex(where: { $0.id == tx.walletID }) else { return }
-        wallets[idx].balance += tx.kind == .income ? tx.amount : -tx.amount
+        applyBalanceEffect(tx, sign: 1)
     }
+
+    func updateTransaction(_ tx: Transaction) {
+        guard let idx = transactions.firstIndex(where: { $0.id == tx.id }) else { return }
+        applyBalanceEffect(transactions[idx], sign: -1)
+        transactions[idx] = tx
+        applyBalanceEffect(tx, sign: 1)
+    }
+
+    func deleteTransaction(_ id: UUID) {
+        guard let idx = transactions.firstIndex(where: { $0.id == id }) else { return }
+        applyBalanceEffect(transactions[idx], sign: -1)
+        transactions.remove(at: idx)
+    }
+
     func addGoal(_ goal: Goal) { goals.append(goal) }
     func addFunds(_ amount: Double, to goalID: UUID) {
         guard let idx = goals.firstIndex(where: { $0.id == goalID }) else { return }
         goals[idx].current += amount
     }
+
+    func updateGoal(_ goal: Goal) {
+        guard let idx = goals.firstIndex(where: { $0.id == goal.id }) else { return }
+        goals[idx] = goal
+    }
+
+    func deleteGoal(_ id: UUID) { goals.removeAll { $0.id == id } }
+
     func addBudget(_ budget: Budget) { budgets.append(budget) }
+
+    func updateBudget(_ budget: Budget) {
+        guard let idx = budgets.firstIndex(where: { $0.id == budget.id }) else { return }
+        budgets[idx] = budget
+    }
+
+    func deleteBudget(_ id: UUID) { budgets.removeAll { $0.id == id } }
 
     func budgets(for period: BudgetPeriod) -> [Budget] {
         budgets.filter { $0.period == period }

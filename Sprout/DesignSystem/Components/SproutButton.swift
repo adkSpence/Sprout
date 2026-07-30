@@ -3,7 +3,7 @@ import SwiftUI
 /// Mirrors the prototype's `.btn` variants: primary (solid accent fill),
 /// secondary (outlined), and ghost (text-only accent).
 enum SproutButtonStyle {
-    case primary, secondary, ghost
+    case primary, secondary, ghost, destructive
 }
 
 struct SproutButton: View {
@@ -31,6 +31,8 @@ struct SproutButton: View {
             .overlay {
                 if style == .secondary {
                     Capsule().stroke(Color.sproutDivider, lineWidth: 1)
+                } else if style == .destructive {
+                    Capsule().stroke(Color.sproutStatusDanger.opacity(0.5), lineWidth: 1)
                 }
             }
         }
@@ -42,6 +44,7 @@ struct SproutButton: View {
         case .primary: return .sproutBg
         case .secondary: return .sproutText
         case .ghost: return .sproutAccent
+        case .destructive: return .sproutStatusDanger
         }
     }
 
@@ -50,6 +53,7 @@ struct SproutButton: View {
         case .primary: return .sproutAccent
         case .secondary: return .clear
         case .ghost: return .clear
+        case .destructive: return .clear
         }
     }
 }
