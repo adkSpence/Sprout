@@ -6,6 +6,10 @@ struct PlanningView: View {
     @State private var showAddGoal = false
     @State private var showAddBudget = false
     @State private var addFundsGoalID: UUID?
+    @State private var editGoalTarget: Goal?
+    @State private var deleteGoalTarget: Goal?
+    @State private var editBudgetTarget: Budget?
+    @State private var deleteBudgetTarget: Budget?
 
     var body: some View {
         ScrollView {
@@ -38,6 +42,26 @@ struct PlanningView: View {
         )) { wrapped in
             AddFundsSheet(goalID: wrapped.id)
         }
+        .sheet(item: $editGoalTarget) { goal in EditGoalSheet(goal: goal) }
+        .sheet(item: $editBudgetTarget) { budget in EditBudgetSheet(budget: budget) }
+        .alert("Delete this goal?", isPresented: Binding(
+            get: { deleteGoalTarget != nil },
+            set: { if !$0 { deleteGoalTarget = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let target = deleteGoalTarget { store.deleteGoal(target.id) }
+            }
+        } message: { Text("This can't be undone.") }
+        .alert("Delete this budget?", isPresented: Binding(
+            get: { deleteBudgetTarget != nil },
+            set: { if !$0 { deleteBudgetTarget = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let target = deleteBudgetTarget { store.deleteBudget(target.id) }
+            }
+        } message: { Text("This can't be undone.") }
     }
 
     private var goalsSection: some View {
@@ -78,6 +102,10 @@ struct PlanningView: View {
                 }
             }
         }
+        .contextMenu {
+            Button { editGoalTarget = goal } label: { Label("Edit goal", systemImage: "pencil") }
+            Button(role: .destructive) { deleteGoalTarget = goal } label: { Label("Delete goal", systemImage: "trash") }
+        }
     }
 
     private var budgetsSection: some View {
@@ -95,11 +123,10 @@ struct PlanningView: View {
             let budgets = store.budgets(for: store.budgetPeriodFilter)
             if budgets.isEmpty {
                 VStack(spacing: 18) {
-                    ZStack {
-                        Circle().fill(Color.sproutAccent100).frame(width: 110, height: 110)
-                        Circle().fill(Color.sproutAccent2_100).frame(width: 70, height: 70)
-                        Image(systemName: "target").font(.system(size: 30, weight: .semibold)).foregroundStyle(Color.sproutAccent700)
-                    }
+                    Image("BudgetEmpty")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 150, height: 150)
                     Text("No \(store.budgetPeriodFilter.rawValue.lowercased()) budgets yet").font(.sproutHeading(17))
                     Text("Create one to keep this period's spending on track.")
                         .font(.sproutBody(13))
@@ -142,6 +169,10 @@ struct PlanningView: View {
                     fillColor: budget.progress > 0.9 ? .sproutStatusDanger : .sproutAccent500
                 )
             }
+        }
+        .contextMenu {
+            Button { editBudgetTarget = budget } label: { Label("Edit budget", systemImage: "pencil") }
+            Button(role: .destructive) { deleteBudgetTarget = budget } label: { Label("Delete budget", systemImage: "trash") }
         }
     }
 

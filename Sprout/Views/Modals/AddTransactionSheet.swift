@@ -6,6 +6,7 @@ struct AddTransactionSheet: View {
 
     var preselectedWalletID: UUID? = nil
     var preselectedCategoryID: UUID? = nil
+    var existingTransaction: Transaction? = nil
 
     @State private var kind: CategoryKind = .expense
     @State private var amountText = ""
@@ -15,6 +16,9 @@ struct AddTransactionSheet: View {
     @State private var date = Date()
     @State private var note = ""
     @State private var showAddCategory = false
+    @State private var showDeleteConfirm = false
+
+    private var isEditing: Bool { existingTransaction != nil }
 
     private var canSave: Bool {
         walletID != nil && categoryID != nil && (Double(amountText) ?? 0) > 0
@@ -29,7 +33,7 @@ struct AddTransactionSheet: View {
     }
 
     var body: some View {
-        ModalSheet(title: "Add transaction") {
+        ModalSheet(title: isEditing ? "Edit transaction" : "Add transaction") {
             HStack(spacing: 0) {
                 segTab("Expense", .expense)
                 segTab("Income", .income)
@@ -83,17 +87,29 @@ struct AddTransactionSheet: View {
 
             SproutTextField(label: "Note", text: $note, placeholder: "Add a note")
 
-            SproutButton(title: "Save") {
+            SproutButton(title: isEditing ? "Save changes" : "Save") {
                 guard let walletID, let categoryID else { return }
                 let amount = Double(amountText) ?? 0
-                store.addTransaction(Transaction(
+                let tx = Transaction(
+                    id: existingTransaction?.id ?? UUID(),
                     walletID: walletID, categoryID: categoryID, subcategoryID: subcategoryID,
                     kind: kind, amount: amount, date: date, note: note
-                ))
+                )
+                if isEditing {
+                    store.updateTransaction(tx)
+                } else {
+                    store.addTransaction(tx)
+                }
                 dismiss()
             }
             .disabled(!canSave)
             .opacity(canSave ? 1 : 0.45)
+
+            if isEditing {
+                SproutButton(title: "Delete transaction", style: .destructive) {
+                    showDeleteConfirm = true
+                }
+            }
         }
         .sheet(isPresented: $showAddCategory) {
             AddCategorySheet(presetKind: kind) { newCategory in
@@ -101,9 +117,26 @@ struct AddTransactionSheet: View {
                 subcategoryID = nil
             }
         }
+        .alert("Delete this transaction?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let id = existingTransaction?.id { store.deleteTransaction(id) }
+                dismiss()
+            }
+        } message: { Text("This can't be undone.") }
         .onAppear {
-            walletID = preselectedWalletID ?? store.wallets.first?.id
-            categoryID = preselectedCategoryID
+            if let tx = existingTransaction {
+                kind = tx.kind
+                amountText = String(format: "%.2f", tx.amount)
+                walletID = tx.walletID
+                categoryID = tx.categoryID
+                subcategoryID = tx.subcategoryID
+                date = tx.date
+                note = tx.note
+            } else {
+                walletID = preselectedWalletID ?? store.wallets.first?.id
+                categoryID = preselectedCategoryID
+            }
         }
     }
 

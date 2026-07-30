@@ -7,6 +7,8 @@ struct HomeView: View {
     @State private var editWalletTarget: Wallet?
     @State private var deleteWalletTarget: Wallet?
     @State private var walletsRowWidth: CGFloat = 360
+    @State private var editTransactionTarget: Transaction?
+    @State private var deleteTransactionTarget: Transaction?
 
     var body: some View {
         ScrollView {
@@ -39,6 +41,20 @@ struct HomeView: View {
             }
         } message: {
             Text("This also deletes every transaction recorded against \"\(deleteWalletTarget?.name ?? "")\". This can't be undone.")
+        }
+        .sheet(item: $editTransactionTarget) { tx in
+            AddTransactionSheet(existingTransaction: tx)
+        }
+        .alert("Delete this transaction?", isPresented: Binding(
+            get: { deleteTransactionTarget != nil },
+            set: { if !$0 { deleteTransactionTarget = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let target = deleteTransactionTarget { store.deleteTransaction(target.id) }
+            }
+        } message: {
+            Text("This can't be undone.")
         }
     }
 
@@ -176,23 +192,33 @@ struct HomeView: View {
     private func transactionRow(_ tx: Transaction) -> some View {
         let category = store.category(tx.categoryID)
         let sub = store.subcategory(tx.categoryID, tx.subcategoryID)
-        return HStack(spacing: 12) {
-            SproutIconChip(systemImage: category?.icon ?? "questionmark", size: 36, iconSize: 17)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(category?.name ?? "Uncategorized").font(.sproutBody(13.5, weight: .semibold))
-                Text(sub?.name ?? tx.note).font(.sproutBody(11.5)).foregroundStyle(Color.sproutNeutral700)
+        return Button {
+            editTransactionTarget = tx
+        } label: {
+            HStack(spacing: 12) {
+                SproutIconChip(systemImage: category?.icon ?? "questionmark", size: 36, iconSize: 17)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(category?.name ?? "Uncategorized").font(.sproutBody(13.5, weight: .semibold))
+                    Text(sub?.name ?? tx.note).font(.sproutBody(11.5)).foregroundStyle(Color.sproutNeutral700)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text((tx.kind == .income ? "+" : "-") + store.primaryCurrency.format(tx.amount))
+                        .font(.sproutHeading(14))
+                        .foregroundStyle(tx.kind == .income ? Color.sproutAccent2_700 : Color.sproutAccent700)
+                    Text(tx.date, format: .dateTime.month(.abbreviated).day())
+                        .font(.sproutBody(11))
+                        .foregroundStyle(Color.sproutNeutral600)
+                }
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 1) {
-                Text((tx.kind == .income ? "+" : "-") + store.primaryCurrency.format(tx.amount))
-                    .font(.sproutHeading(14))
-                    .foregroundStyle(tx.kind == .income ? Color.sproutAccent2_700 : Color.sproutAccent700)
-                Text(tx.date, format: .dateTime.month(.abbreviated).day())
-                    .font(.sproutBody(11))
-                    .foregroundStyle(Color.sproutNeutral600)
-            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 10)
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button { editTransactionTarget = tx } label: { Label("Edit", systemImage: "pencil") }
+            Button(role: .destructive) { deleteTransactionTarget = tx } label: { Label("Delete", systemImage: "trash") }
+        }
     }
 }
 
